@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox,
                                QDoubleSpinBox, QFormLayout, QHBoxLayout, QLineEdit,
                                QTabWidget, QVBoxLayout, QWidget, QLabel, QPushButton, QScrollArea, QFrame, QMessageBox)
 
-from astropanel.services.updates import UpdateChecker, RELEASES_URL
+from astropanel.services.updates import UpdateChecker, RELEASES_URL, PRIVATE_CHANNEL
 from astropanel import __version__
 from astropanel.domain.models import AppSettings, ObservatoryLocation
 from astropanel.ui.widgets import WorldMapWidget
@@ -144,7 +144,7 @@ class SettingsDialog(QDialog):
         self.update_checker.ready.connect(self._update_checked)
         self.update_checker.failed.connect(self._update_failed)
         self.updates_button.clicked.connect(self._check_updates)
-        self.update_status = QLabel('Consulte novas versões no canal oficial do AstroPanel.')
+        self.update_status = QLabel('Canal privado: consulte as versões com sua conta GitHub autorizada.' if PRIVATE_CHANNEL else 'Consulte novas versões no canal oficial do AstroPanel.')
         self.release_button = QPushButton('Abrir página das versões')
         self.release_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(RELEASES_URL)))
         self.update_status.setWordWrap(True)
@@ -155,6 +155,11 @@ class SettingsDialog(QDialog):
         return scroll
 
     def _check_updates(self):
+        if PRIVATE_CHANNEL:
+            opened = QDesktopServices.openUrl(QUrl(RELEASES_URL))
+            self.update_status.setText('Entre no GitHub com uma conta autorizada para consultar as versões do AstroPanel.'
+                                       if opened else 'Não foi possível abrir a página das versões no navegador.')
+            return
         self.updates_button.setEnabled(False)
         self.update_status.setText('Consultando versões publicadas no GitHub…')
         self.update_checker.check()

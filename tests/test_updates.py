@@ -26,6 +26,7 @@ def test_about_update_success_and_failure_reenable_button(monkeypatch):
     from astropanel.ui.settings_dialog import SettingsDialog
     app = QApplication.instance() or QApplication([])
     dialog = SettingsDialog(AppSettings())
+    monkeypatch.setattr('astropanel.ui.settings_dialog.PRIVATE_CHANNEL', False)
     calls=[]
     monkeypatch.setattr(dialog.update_checker, 'check', lambda: calls.append(True))
     dialog.updates_button.click()
@@ -37,4 +38,19 @@ def test_about_update_success_and_failure_reenable_button(monkeypatch):
     dialog._update_failed('Falha de conexão')
     assert dialog.updates_button.isEnabled()
     assert dialog.update_status.text() == 'Falha de conexão'
+    dialog.close()
+
+
+def test_private_channel_opens_authenticated_browser_page(monkeypatch):
+    from astropanel.domain.models import AppSettings
+    from astropanel.ui.settings_dialog import SettingsDialog
+    app = QApplication.instance() or QApplication([])
+    urls=[]
+    monkeypatch.setattr('astropanel.ui.settings_dialog.PRIVATE_CHANNEL', True)
+    monkeypatch.setattr('astropanel.ui.settings_dialog.QDesktopServices.openUrl', lambda url: urls.append(url.toString()) or True)
+    dialog = SettingsDialog(AppSettings())
+    dialog.updates_button.click()
+    assert urls == [RELEASES_URL]
+    assert 'conta autorizada' in dialog.update_status.text()
+    assert dialog.updates_button.isEnabled()
     dialog.close()

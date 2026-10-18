@@ -1,4 +1,4 @@
-"""Check the public AstroPanel release channel without downloading or installing."""
+"""Check the AstroPanel release channel without downloading or installing."""
 from dataclasses import dataclass
 import json
 import re
@@ -8,6 +8,7 @@ from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequ
 from astropanel import __version__
 
 REPOSITORY = 'cjacqueslf/AstroPanel'
+PRIVATE_CHANNEL = True
 RELEASES_URL = f'https://github.com/{REPOSITORY}/releases'
 LATEST_URL = f'https://api.github.com/repos/{REPOSITORY}/releases/latest'
 
@@ -61,7 +62,7 @@ class UpdateChecker(QObject):
         try:
             status = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute)
             if status == 404:
-                raise ValueError('Ainda não há uma versão publicada no canal de atualizações.')
+                raise ValueError('O canal não está acessível sem autenticação ou ainda não tem uma versão publicada. Abra a página das versões com sua conta GitHub autorizada.')
             if reply.error() != QNetworkReply.NetworkError.NoError:
                 raise ValueError('Não foi possível consultar o GitHub: '+reply.errorString())
             self.ready.emit(parse_release(json.loads(bytes(reply.readAll()))))
