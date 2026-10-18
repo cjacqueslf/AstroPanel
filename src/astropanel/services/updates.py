@@ -8,7 +8,7 @@ from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequ
 from astropanel import __version__
 
 REPOSITORY = 'cjacqueslf/AstroPanel'
-PRIVATE_CHANNEL = True
+PRIVATE_CHANNEL = False
 RELEASES_URL = f'https://github.com/{REPOSITORY}/releases'
 LATEST_URL = f'https://api.github.com/repos/{REPOSITORY}/releases/latest'
 

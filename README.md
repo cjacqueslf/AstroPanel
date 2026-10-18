@@ -114,17 +114,17 @@ Selecione **Painéis → Painel Observação Solar**. Exibe o contínuo visível
 
 Em **Configurações → Localização**, use **Novo local** para iniciar outro cadastro, mantendo as coordenadas como ponto de partida. Informe um nome único e use **Adicionar local**. Selecione um cadastro existente e use **Atualizar selecionado** para alterar seus dados, inclusive o nome. **Remover local** exclui o cadastro selecionado. Clique em **Salvar** para gravar as mudanças e ativar o local selecionado; **Cancelar** descarta as alterações da janela.
 
-A aba **Sobre** mostra a versão do AstroPanel, autoria, créditos das fontes e o oferecimento do Observatório SONEAR e do canal AstroNEOS. **Ajuda** apresenta os primeiros passos e **Abrir manual do usuário** abre o manual HTML local, distribuído com o aplicativo. O botão **Verificar atualizações** abre https://github.com/cjacqueslf/AstroPanel/releases para consulta com sua conta GitHub autorizada. Não instala ou baixa arquivos automaticamente. **Abrir página das versões** mostra as notas e os arquivos disponíveis.
+A aba **Sobre** mostra a versão do AstroPanel, autoria, créditos das fontes e o oferecimento do Observatório SONEAR e do canal AstroNEOS. **Ajuda** apresenta os primeiros passos e **Abrir manual do usuário** abre o manual HTML local, distribuído com o aplicativo. O botão **Verificar atualizações** consulta a última versão estável em https://github.com/cjacqueslf/AstroPanel/releases pela API pública do GitHub, sem exigir login. Não instala ou baixa arquivos automaticamente. **Abrir página das versões** mostra as notas e os arquivos disponíveis.
 
 
 ## Publicar uma nova versão
 
 1. Atualize `__version__` em `src/astropanel/__init__.py` e `version` em `pyproject.toml` com o mesmo número (ex.: `0.1.1`).
 2. Execute `python -m pytest` e publique o commit no GitHub.
-3. Crie uma release estável no repositório privado com a tag correspondente (ex.: `v0.1.1`) em https://github.com/cjacqueslf/AstroPanel/releases/new. Inclua notas de alterações e os pacotes de distribuição disponíveis.
-4. O botão **Verificar atualizações** abre o canal privado para consultar as publicações. Apenas contas GitHub autorizadas podem acessar as versões.
+3. Crie uma release pública estável com a tag correspondente (ex.: `v0.1.1`) em https://github.com/cjacqueslf/AstroPanel/releases/new. Inclua notas de alterações e os pacotes de distribuição disponíveis.
+4. O botão **Verificar atualizações** detecta a publicação pela API pública do GitHub. Tags sem release, rascunhos e pré-lançamentos não são usados pelo canal estável.
 
 
-### Canal privado de versões
+### Canal público de versões
 
-O repositório AstroPanel é privado. **Verificar atualizações** abre a página de releases no navegador para autenticação com uma conta GitHub autorizada. O aplicativo não armazena tokens de acesso. A consulta anônima pela API fica disponível apenas se o canal voltar a ser público e `PRIVATE_CHANNEL` for desativado em `services/updates.py`.
+O repositório AstroPanel é público. A consulta de atualizações dispensa autenticação. **Abrir página das versões** mostra as notas e os arquivos disponíveis no GitHub.
