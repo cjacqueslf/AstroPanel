@@ -17,7 +17,7 @@ Widget Windows para astronomia observacional: relógios UTC/local/LST, dados de 
 
 ### Download para Windows
 
-Baixe o pacote **AstroPanel-0.1.1-Windows-x64.zip** na
+Baixe o pacote **AstroPanel-0.1.2-Windows-x64.zip** na
 [página de versões](https://github.com/cjacqueslf/AstroPanel/releases/latest).
 Extraia todo o ZIP e execute `AstroPanel.exe` dentro da pasta AstroPanel.
 Não é necessário instalar Python. Mantenha a pasta `_internal` junto do executável.
@@ -129,9 +129,9 @@ A aba **Sobre** mostra a versão do AstroPanel, autoria, créditos das fontes e 
 
 ## Publicar uma nova versão
 
-1. Atualize `__version__` em `src/astropanel/__init__.py` e `version` em `pyproject.toml` com o mesmo número (ex.: `0.1.1`).
+1. Atualize `__version__` em `src/astropanel/__init__.py` e `version` em `pyproject.toml` com o mesmo número (ex.: `0.1.2`).
 2. Execute `python -m pytest` e publique o commit no GitHub.
-3. Crie uma release pública estável com a tag correspondente (ex.: `v0.1.1`) em https://github.com/cjacqueslf/AstroPanel/releases/new. Inclua notas de alterações e os pacotes de distribuição disponíveis.
+3. Crie uma release pública estável com a tag correspondente (ex.: `v0.1.2`) em https://github.com/cjacqueslf/AstroPanel/releases/new. Inclua notas de alterações e os pacotes de distribuição disponíveis.
 4. O botão **Verificar atualizações** detecta a publicação pela API pública do GitHub. Tags sem release, rascunhos e pré-lançamentos não são usados pelo canal estável.
 
 
@@ -168,3 +168,11 @@ Referência da API: https://ssd-api.jpl.nasa.gov/doc/horizons.html
 ### Linhas de referência no Céu agora
 
 A faixa inferior **Linhas** permite mostrar ou ocultar independentemente **Meridiano** (laranja tracejado), **Eclíptica** (amarelo) e **Equador celeste** (ciano traço-ponto). As três linhas começam visíveis; os controles mantêm sua seleção enquanto a janela é usada. O meridiano passa pelo norte, zênite e sul. O equador e a eclíptica são calculados para a data e transformados para o horizonte do observatório, com atualização junto ao céu.
+
+
+### Alterações da versão 0.1.2
+
+- Correção da inicialização com Windows no pacote portátil e na execução pelo código-fonte.
+- Seleção de locais salvos mais legível e restauração dos campos ao selecionar novamente o mesmo local.
+- Marcador nativo georreferenciado no Light Pollution Map, com nome configurável e recarga ao mudar de observatório.
+- Melhor aproveitamento da área do mapa de poluição luminosa em painéis pequenos.

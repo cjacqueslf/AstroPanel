@@ -5,6 +5,25 @@ from astropanel.domain.models import AppSettings
 from astropanel.ui.settings_dialog import SettingsDialog
 
 
+def test_reselecting_saved_location_restores_fields_and_saves_selection(tmp_path):
+    from astropanel.domain.models import ObservatoryLocation
+    from astropanel.services.settings import SettingsService
+    app = QApplication.instance() or QApplication([])
+    casa = ObservatoryLocation(name='Casa', latitude=-19.92, longitude=-43.93)
+    campo = ObservatoryLocation(name='Campo', latitude=-7.11, longitude=-34.861)
+    dialog = SettingsDialog(AppSettings(location=casa, saved_locations=[casa, campo]))
+    dialog.name.setText('Rascunho')
+    dialog.locations.activated.emit(1)
+    assert dialog.name.text() == 'Casa'
+    dialog.locations.setCurrentIndex(2)
+    dialog.accept()
+    assert dialog.result() == dialog.DialogCode.Accepted
+    service = SettingsService(tmp_path / 'settings.json')
+    service.save(dialog.result_settings())
+    assert service.load().location == campo
+    assert service.load().saved_locations == [casa, campo]
+
+
 def test_saved_locations_and_labels(tmp_path):
     from astropanel.services.settings import SettingsService
     app = QApplication.instance() or QApplication([])

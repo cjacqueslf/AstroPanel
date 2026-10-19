@@ -66,11 +66,32 @@ def test_combined_map_uses_windy_clouds_and_observer_marker():
     assert "windy_instarain" in MAP_PROVIDERS
 
 
-def test_light_pollution_uses_custom_observer_instead_of_native_numbered_pin():
-    query = parse_qs(urlparse(weather_web_url('light_pollution', -23.55, -46.63)).fragment)
+def test_light_pollution_uses_native_georeferenced_marker():
+    import base64
+    import json
+    import math
+    query = parse_qs(urlparse(weather_web_url('light_pollution', -23.55, -46.63, 'Observatório')).fragment)
     assert query['lat'] == ['-23.55']
     assert query['lon'] == ['-46.63']
-    assert 'state' not in query
+    state = json.loads(base64.b64decode(query['state'][0]))
+    assert query['zoom'] == ['9']
+    x, y = state['markers']['markerObservatório']
+    assert math.isclose(x, 6378137 * math.radians(-46.63))
+    assert math.isclose(y, 6378137 * math.log(math.tan(math.pi / 4 + math.radians(-23.55) / 2)))
+
+
+def test_light_pollution_can_hide_the_label_without_hiding_the_pin():
+    import base64
+    import json
+    query = parse_qs(urlparse(weather_web_url('light_pollution', 0, 0, '')).fragment)
+    state = json.loads(base64.b64decode(query['state'][0]))
+    assert list(state['markers']) == ['marker']
+
+
+def test_switching_light_pollution_location_forces_new_document():
+    first = urlparse(weather_web_url('light_pollution', -19.92, -43.93))
+    second = urlparse(weather_web_url('light_pollution', -7.11, -34.861))
+    assert first._replace(fragment='') != second._replace(fragment='')
 
 
 def test_nasa_observer_projection_matches_requested_bounds():

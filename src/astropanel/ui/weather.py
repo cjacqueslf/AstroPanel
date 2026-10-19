@@ -85,7 +85,10 @@ class WeatherMapPage(QWidget):
             heading += " · " + (location.map_label or location.name)
         self.map_heading.setText(heading)
         self.map_heading.adjustSize()
-        url = weather_web_url(provider, location.latitude, location.longitude, location.name)
+        map_name = location.name
+        if provider == 'light_pollution':
+            map_name = (location.map_label or location.name) if location.show_map_label else ''
+        url = weather_web_url(provider, location.latitude, location.longitude, map_name)
         self.current_url = url
         self.status.setVisible(bool(url))
         self.open_button.setVisible(bool(url))

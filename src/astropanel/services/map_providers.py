@@ -27,8 +27,18 @@ def weather_web_url(provider: str, latitude: float, longitude: float, name: str 
     if provider == "instarain":
         return "https://www.instarain.com.br/"
     if provider == "light_pollution":
-        return "https://www.lightpollutionmap.info/#" + urlencode({
-            "zoom": 7, "lat": latitude, "lon": longitude})
+        import base64
+        import json
+        # The site's native marker uses Web Mercator and follows pan/zoom itself.
+        lat = max(-85.05112878, min(85.05112878, latitude))
+        point = [6378137 * math.radians(longitude),
+                 6378137 * math.log(math.tan(math.pi / 4 + math.radians(lat) / 2))]
+        state = base64.b64encode(json.dumps({"markers": {"marker" + name: point}}).encode()).decode()
+        # A changed query forces a full page load when switching observatories;
+        # this site reads marker state only on load, not on fragment navigation.
+        query = urlencode({"observer": f"{latitude},{longitude}"})
+        return "https://www.lightpollutionmap.info/?" + query + "#" + urlencode({
+            "zoom": 9, "lat": latitude, "lon": longitude, "state": state})
     if provider == "ventusky":
         return "https://www.ventusky.com/?" + urlencode({
             "p": f"{latitude};{longitude};7", "l": "clouds-total",

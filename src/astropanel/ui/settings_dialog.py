@@ -7,7 +7,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QDesktopServices
-from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox,
+from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QListView, QStyleFactory,
                                QDoubleSpinBox, QFormLayout, QHBoxLayout, QLineEdit,
                                QTabWidget, QVBoxLayout, QWidget, QLabel, QPushButton, QScrollArea, QFrame, QMessageBox)
 
@@ -44,6 +44,19 @@ class SettingsDialog(QDialog):
         loc = self.settings.location
         self.saved_locations = list(self.settings.saved_locations)
         self.locations = QComboBox()
+        # A Qt-rendered list avoids native popup issues with always-on-top windows.
+        self._locations_style = QStyleFactory.create("Fusion")
+        self._locations_style.setParent(self.locations)
+        self.locations.setStyle(self._locations_style)
+        self.locations.setView(QListView(self.locations))
+        self.locations.setMaxVisibleItems(8)
+        self.locations.setMinimumHeight(32)
+        self.locations.setStyleSheet(
+            "QComboBox {padding:6px; background:#172633; color:#e5f2f7;}"
+            "QComboBox QAbstractItemView {background:#172633; color:#e5f2f7;"
+            "selection-background-color:#345c76; selection-color:white; outline:0;}"
+            "QComboBox QAbstractItemView::item {min-height:30px; padding:3px 8px;}"
+        )
         self.locations.addItem("Local atual", loc)
         for saved in self.saved_locations:
             self.locations.addItem(saved.name, saved)
@@ -83,6 +96,7 @@ class SettingsDialog(QDialog):
         self.picker.location_selected.connect(self._map_selected)
         layout.addWidget(self.picker)
         self.locations.currentIndexChanged.connect(self._select_location)
+        self.locations.activated.connect(self._select_location)
         for index, saved in enumerate(self.saved_locations, 1):
             if saved == loc:
                 self.locations.setCurrentIndex(index)
