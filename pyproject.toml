@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "astropanel"
-version = "0.1.0"
+version = "0.1.1"
 description = "Widget Windows para astronomia observacional"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -29,7 +29,7 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-astropanel = ["resources/*.html", "resources/*.json", "resources/*.svg", "resources/*.md", "resources/*.png"]
+astropanel = ["resources/*.html", "resources/*.json", "resources/*.svg", "resources/*.md", "resources/*.png", "resources/*.ico"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

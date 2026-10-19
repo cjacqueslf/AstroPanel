@@ -1,5 +1,5 @@
 """Offline sky positions for the observatory, with bundled bright-star data."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from functools import lru_cache
 import json
@@ -7,7 +7,7 @@ from pathlib import Path
 
 import numpy as np
 import astropy.units as u
-from astropy.coordinates import AltAz, EarthLocation, SkyCoord, get_body
+from astropy.coordinates import AltAz, EarthLocation, GeocentricTrueEcliptic, SkyCoord, TETE, get_body
 from astropy.time import Time
 from astropy.utils import iers
 from astropanel.services.planets import PLANETS
@@ -37,6 +37,7 @@ class SkySnapshot:
     sun_altitude: float
     moon_illumination: float
     moon_light_angle: float
+    reference_lines: dict = field(default_factory=dict)
 
 
 def calculate_sky(location, moment=None):
@@ -64,6 +65,17 @@ def calculate_sky(location, moment=None):
         label_positions = transform([s[0] for s in labels])
         galactic = SkyCoord(l=np.arange(361)*u.deg, b=np.zeros(361)*u.deg, frame='galactic').icrs
         milky_way = transform(list(zip(galactic.ra.degree, galactic.dec.degree)))
+        angles = np.arange(361)*u.deg
+        equator = SkyCoord(ra=angles, dec=np.zeros(361)*u.deg,
+                           frame=TETE(obstime=time)).transform_to(frame)
+        ecliptic = SkyCoord(lon=angles, lat=np.zeros(361)*u.deg,
+                            frame=GeocentricTrueEcliptic(equinox=time, obstime=time)).transform_to(frame)
+        reference_lines = {
+            'meridian': [(0., float(alt)) for alt in range(91)]
+                        + [(180., float(alt)) for alt in range(89, -1, -1)],
+            'equator': list(zip(equator.az.degree.tolist(), equator.alt.degree.tolist())),
+            'ecliptic': list(zip(ecliptic.az.degree.tolist(), ecliptic.alt.degree.tolist())),
+        }
         bodies = []
         coordinates = {}
         for key, name in {'sun': 'Sol', 'moon': 'Lua', **PLANETS}.items():
@@ -92,4 +104,4 @@ def calculate_sky(location, moment=None):
         light_angle = float(np.degrees(np.arctan2(delta[1], delta[0])))
     return SkySnapshot(moment, [(az, alt, mag, name) for (az, alt), (_, mag, name) in zip(positions, stars)],
                        result_lines, [(az, alt, name) for (az, alt), (_, name) in zip(label_positions, labels)],
-                       milky_way, bodies, bodies[0][2], illumination, light_angle)
+                       milky_way, bodies, bodies[0][2], illumination, light_angle, reference_lines)

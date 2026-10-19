@@ -14,3 +14,10 @@ Credits: NASA/GSFC Scientific Visualization Studio, Ernie Wright, Noah Petro.
 Sky catalog and constellation figures: d3-celestial, Olaf Frohn (BSD-3-Clause).
 https://github.com/ofrohn/d3-celestial
 See d3-celestial-LICENSE.md. Stars: Hipparcos catalog as distributed by d3-celestial.
+
+Deep-sky coordinate lookup: CDS Sesame (SIMBAD, NED and VizieR resolver).
+https://cds.unistra.fr/cgi-bin/Sesame
+Local horizontal coordinates are calculated with Astropy.
+
+Solar System topocentric ephemerides: NASA/JPL Horizons.
+https://ssd-api.jpl.nasa.gov/doc/horizons.html

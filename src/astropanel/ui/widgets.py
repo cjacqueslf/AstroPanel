@@ -5,11 +5,11 @@ import math
 import numpy as np
 from pathlib import Path
 
-from PySide6.QtCore import QPointF, Qt, QUrl
+from PySide6.QtCore import QPointF, QRectF, Qt, QUrl
 from PySide6.QtGui import QColor, QImage, QPainter, QPainterPath, QPen, QPixmap
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 from PySide6.QtSvg import QSvgRenderer
-from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget, QPushButton
+from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget, QPushButton, QHBoxLayout
 
 from astropanel.domain.models import ObservatoryLocation
 from astropanel.services.map_providers import Goes19GeoColorProvider, Goes19InfraredProvider, NasaGibsProvider
@@ -154,6 +154,27 @@ class WorldMapWidget(QWidget):
 class SatelliteMapWidget(QLabel):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        self.zoom_factor = 1.0
+        self.pan_offset = QPointF()
+        self._drag_position = None
+        self.zoom_controls = QWidget(self)
+        self.zoom_controls.setStyleSheet('QWidget {background:#071019;color:white;} QPushButton {padding:3px 7px;border:1px solid #456071;border-radius:3px;} QPushButton:disabled {color:#607080;}')
+        controls = QHBoxLayout(self.zoom_controls)
+        controls.setContentsMargins(4, 3, 4, 3)
+        controls.setSpacing(4)
+        self.zoom_out_button = QPushButton('−')
+        self.zoom_out_button.setToolTip('Diminuir zoom')
+        self.zoom_in_button = QPushButton('+')
+        self.zoom_in_button.setToolTip('Aumentar zoom')
+        self.zoom_label = QLabel('1,0×')
+        self.fit_button = QPushButton('Ajustar')
+        self.fit_button.setToolTip('Mostrar a imagem inteira (duplo clique)')
+        for widget in (self.zoom_out_button, self.zoom_label, self.zoom_in_button, self.fit_button):
+            controls.addWidget(widget)
+        self.zoom_in_button.clicked.connect(lambda: self.set_zoom(self.zoom_factor*1.4))
+        self.zoom_out_button.clicked.connect(lambda: self.set_zoom(self.zoom_factor/1.4))
+        self.fit_button.clicked.connect(self.reset_view)
+        self.zoom_controls.hide()
         self.network = QNetworkAccessManager(self)
         self.reply: QNetworkReply | None = None
         self.map_pixmap = QPixmap()
@@ -167,6 +188,9 @@ class SatelliteMapWidget(QLabel):
         self.setObjectName("mapPlaceholder")
 
     def set_location(self, location: ObservatoryLocation, provider: str) -> None:
+        if self.location != location or self.provider_name != provider:
+            self.reset_view()
+        self.zoom_controls.hide()
         self.location = location
         self.provider_name = provider
         self.image_timestamp = ""
@@ -231,7 +255,99 @@ class SatelliteMapWidget(QLabel):
             self.map_pixmap = pixmap
             self.setText("")
             self.update()
-            self.setToolTip(self.source_caption())
+            self._clamp_pan()
+            self._update_zoom_controls()
+            self.zoom_controls.show()
+            self.setToolTip(self.source_caption() + '\nRoda do mouse: zoom · arraste: mover · duplo clique: ajustar. Ampliação da imagem disponível.')
+
+    def image_rect(self):
+        if self.map_pixmap.isNull():
+            return QRectF()
+        fit = self.map_pixmap.size().scaled(self.size(), Qt.AspectRatioMode.KeepAspectRatio)
+        width, height = fit.width()*self.zoom_factor, fit.height()*self.zoom_factor
+        return QRectF((self.width()-width)/2+self.pan_offset.x(),
+                      (self.height()-height)/2+self.pan_offset.y(), width, height)
+
+    def _clamp_pan(self):
+        rect = self.image_rect()
+        max_x, max_y = max(0, (rect.width()-self.width())/2), max(0, (rect.height()-self.height())/2)
+        self.pan_offset = QPointF(max(-max_x, min(max_x, self.pan_offset.x())),
+                                 max(-max_y, min(max_y, self.pan_offset.y())))
+
+    def _update_zoom_controls(self):
+        self.zoom_label.setText(f'{self.zoom_factor:.1f}×'.replace('.', ','))
+        self.zoom_out_button.setEnabled(self.zoom_factor > 1)
+        self.zoom_in_button.setEnabled(self.zoom_factor < 8)
+        self.zoom_controls.adjustSize()
+        self.zoom_controls.move(max(0, self.width()-self.zoom_controls.width()-8),
+                                max(0, self.height()-self.zoom_controls.height()-26))
+        self.setCursor(Qt.CursorShape.OpenHandCursor if self.zoom_factor > 1 else Qt.CursorShape.ArrowCursor)
+
+    def set_zoom(self, value, anchor=None):
+        if self.map_pixmap.isNull():
+            return
+        value = max(1., min(8., value))
+        center = QPointF(self.width()/2, self.height()/2)
+        anchor = anchor if anchor is not None else center
+        relative = anchor-center
+        self.pan_offset = relative-(relative-self.pan_offset)*(value/self.zoom_factor)
+        self.zoom_factor = value
+        self._clamp_pan()
+        self._update_zoom_controls()
+        self.update()
+
+    def reset_view(self):
+        self.zoom_factor = 1.
+        self.pan_offset = QPointF()
+        self._drag_position = None
+        self._update_zoom_controls()
+        self.update()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._clamp_pan()
+        self._update_zoom_controls()
+
+    def wheelEvent(self, event):
+        if self.map_pixmap.isNull():
+            super().wheelEvent(event)
+            return
+        delta = event.angleDelta().y() or event.pixelDelta().y()
+        self.set_zoom(self.zoom_factor*1.25**(delta/120), event.position())
+        event.accept()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton and self.zoom_factor > 1 and not self.map_pixmap.isNull():
+            self._drag_position = event.position()
+            self.setCursor(Qt.CursorShape.ClosedHandCursor)
+            event.accept()
+        else:
+            super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self._drag_position is not None:
+            self.pan_offset += event.position()-self._drag_position
+            self._drag_position = event.position()
+            self._clamp_pan()
+            self.update()
+            event.accept()
+        else:
+            super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton and self._drag_position is not None:
+            self._drag_position = None
+            self._update_zoom_controls()
+            event.accept()
+        else:
+            super().mouseReleaseEvent(event)
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton and not self.map_pixmap.isNull():
+            self.reset_view()
+            event.accept()
+        else:
+            super().mouseDoubleClickEvent(event)
 
     def source_caption(self) -> str:
         if self.provider_name == "goes19_infrared":
@@ -246,24 +362,28 @@ class SatelliteMapWidget(QLabel):
             return
         painter = QPainter(self)
         painter.fillRect(self.rect(), QColor("#071019"))
-        target = self.map_pixmap.size().scaled(self.size(), Qt.AspectRatioMode.KeepAspectRatio)
-        x, y = (self.width() - target.width()) // 2, (self.height() - target.height()) // 2
-        painter.drawPixmap(x, y, target.width(), target.height(), self.map_pixmap)
+        target = self.image_rect()
+        x, y = target.x(), target.y()
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+        painter.drawPixmap(target, self.map_pixmap, QRectF(self.map_pixmap.rect()))
         if self.location:
             project = NasaGibsProvider.project_location
             relative_x, relative_y = project(self.location.latitude, self.location.longitude)
-            if 0 <= relative_x <= 1 and 0 <= relative_y <= 1:
+            if (0 <= relative_x <= 1 and 0 <= relative_y <= 1
+                    and self.rect().contains(round(x+relative_x*target.width()), round(y+relative_y*target.height()))):
                 px, py = round(x + relative_x * target.width()), round(y + relative_y * target.height())
                 painter.setRenderHint(QPainter.RenderHint.Antialiasing)
                 painter.setPen(QPen(QColor("white"), 2))
                 painter.setBrush(QColor("#e53935"))
                 painter.drawEllipse(QPointF(px, py), 6, 6)
                 label = (self.location.map_label or self.location.name) if self.location.show_map_label else ""
+                label = painter.fontMetrics().elidedText(label, Qt.TextElideMode.ElideRight, max(1, self.width()-24))
                 label_width = painter.fontMetrics().horizontalAdvance(label)
                 label_x = max(8, min(px + 10, self.width() - label_width - 8))
                 label_y = max(18, min(py - 10, self.height() - 30))
-                painter.fillRect(label_x - 3, label_y - painter.fontMetrics().ascent(),
-                                 label_width + 6, painter.fontMetrics().height(), QColor("#071019"))
+                if label:
+                    painter.fillRect(label_x - 3, label_y - painter.fontMetrics().ascent(),
+                                     label_width + 6, painter.fontMetrics().height(), QColor("#071019"))
                 painter.setPen(QColor("white"))
                 painter.drawText(label_x, label_y, label)
         painter.setPen(QColor("#ffffff"))
@@ -451,12 +571,19 @@ class MoonAltitudeChart(QFrame):
         self.setMinimumHeight(205)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.altitudes: tuple[float, ...] = ()
+        self.object_altitudes = ()
+        self.object_name = ''
         self.current_hour = 0.0
         self.twilight_events: tuple[datetime | None, ...] = ()
 
     def set_values(self, altitudes: tuple[float, ...], twilight_events: tuple[datetime | None, ...]) -> None:
         self.altitudes = altitudes
         self.twilight_events = twilight_events
+        self.update()
+
+    def set_object(self, name, altitudes):
+        self.object_name = name
+        self.object_altitudes = altitudes
         self.update()
 
     def set_current_hour(self, current_hour: float) -> None:
@@ -471,9 +598,13 @@ class MoonAltitudeChart(QFrame):
         if bounds.width() < 2 or bounds.height() < 2:
             return
         painter.setPen(QColor("#ffffff"))
-        painter.drawText(12, 17, "ALTURA DA LUA")
+        painter.drawText(12, 17, 'ALTURA · Lua' if self.object_altitudes else 'ALTURA DA LUA')
+        if self.object_altitudes:
+            painter.setPen(QColor('#70e6b3'))
+            name = painter.fontMetrics().elidedText(self.object_name, Qt.TextElideMode.ElideRight, max(1, self.width()-180))
+            painter.drawText(125, 17, name)
         painter.setPen(QColor("#c6d9e8"))
-        painter.drawText(self.width() - 48, 17, "HOJE")
+        painter.drawText(self.width() - 56, 17, "12h–12h")
 
         # A escala começa ao meio-dia. Assim, a meia-noite fica no centro do
         # gráfico e o período diurno aparece nas duas laterais.
@@ -550,6 +681,21 @@ class MoonAltitudeChart(QFrame):
         if self.altitudes:
             altitude = altitude_at(displayed_now)
             painter.drawEllipse(point(displayed_now, altitude), 3.5, 3.5)
+
+        if len(self.object_altitudes) > 1:
+            count = len(self.object_altitudes)-1
+            curve = QPainterPath(point(0, self.object_altitudes[0]))
+            for index, altitude in enumerate(self.object_altitudes[1:], 1):
+                curve.lineTo(point(index/count*24, altitude))
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.setPen(QPen(QColor('#70e6b3'), 2.2))
+            painter.drawPath(curve)
+            position = displayed_now/24*count
+            base = min(count-1, int(position))
+            fraction = position-base
+            current = self.object_altitudes[base]*(1-fraction)+self.object_altitudes[base+1]*fraction
+            painter.setBrush(QColor('#70e6b3')); painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(point(displayed_now, current), 3.5, 3.5)
 
 
 class MoonPhaseIcon(QWidget):

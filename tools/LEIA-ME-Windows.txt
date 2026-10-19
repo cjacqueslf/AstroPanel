@@ -1,0 +1,21 @@
+AstroPanel para Windows (64 bits)
+
+1. Extraia todo o arquivo ZIP para uma pasta no seu computador.
+2. Abra a pasta AstroPanel e execute AstroPanel.exe.
+3. Em Configurações > Localização, configure o seu local de observação.
+
+Não é necessário instalar Python. Mantenha a pasta _internal ao lado do
+executável: ela contém as bibliotecas e os recursos do programa.
+
+Os cálculos astronômicos locais funcionam sem internet. Consultas de catálogos,
+JPL, meteorologia e imagens online precisam de conexão.
+
+As preferências ficam na pasta .astropanel do seu usuário e são preservadas
+ao trocar a pasta do programa por uma versão nova. Para atualizar, saia pelo
+ícone da bandeja e extraia o novo pacote em outra pasta.
+
+Fechar a janela minimiza o AstroPanel para a bandeja. Para encerrar, use Sair
+no menu do ícone ao lado do relógio do Windows.
+
+Versões e código-fonte: https://github.com/cjacqueslf/AstroPanel
+Downloads: https://github.com/cjacqueslf/AstroPanel/releases/latest

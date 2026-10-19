@@ -7,6 +7,12 @@ from PySide6.QtGui import QColor, QFont, QPainter, QPen, QRadialGradient, QPaint
 from PySide6.QtWidgets import QApplication, QCheckBox, QDialog, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 from astropanel.services.sky import calculate_sky
 
+REFERENCE_LAYERS = (
+    ('Meridiano', 'meridian', '#ff9e70', Qt.PenStyle.DashLine),
+    ('Eclíptica', 'ecliptic', '#ffe082', Qt.PenStyle.SolidLine),
+    ('Equador celeste', 'equator', '#75e3ed', Qt.PenStyle.DashDotLine),
+)
+
 
 
 def draw_moon(painter, center, radius, illumination, angle):
@@ -57,6 +63,7 @@ class SkyCanvas(QWidget):
         super().__init__(parent)
         self.snapshot = None
         self.names = self.lines = self.milky = True
+        self.meridian = self.ecliptic = self.equator = True
         self.setMinimumSize(300, 260)
 
     def paintEvent(self, event):
@@ -82,17 +89,31 @@ class SkyCanvas(QWidget):
         p.setBrush(gradient); p.setPen(Qt.PenStyle.NoPen); p.drawEllipse(disk)
         clip = QPainterPath(); clip.addEllipse(disk)
         p.save(); p.setClipPath(clip)
-        def segments(points, color, width):
-            p.setPen(QPen(color, width, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        def segments(points, color, width, style=Qt.PenStyle.SolidLine, clip_horizon=False):
+            p.setPen(QPen(color, width, style, Qt.PenCapStyle.RoundCap))
+            path = QPainterPath()
+            connected = False
             for (az1, alt1), (az2, alt2) in zip(points, points[1:]):
-                if alt1 >= 0 and alt2 >= 0:
-                    p.drawLine(point(az1, alt1), point(az2, alt2))
+                if (alt1 >= 0 and alt2 >= 0) or (clip_horizon and max(alt1, alt2) >= 0):
+                    if not connected:
+                        path.moveTo(point(az1, alt1))
+                    path.lineTo(point(az2, alt2))
+                    connected = True
+                else:
+                    connected = False
+            p.save()
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            p.drawPath(path)
+            p.restore()
         if self.milky and daylight < .8:
             for width, alpha in [(32, 5), (22, 6), (12, 7)]:
                 segments(sky.milky_way, QColor(162, 177, 210, int(alpha*(1-daylight))), radius*width/300)
         if self.lines:
             for line in sky.lines:
                 segments(line, QColor(90, 159, 195, 100), 1)
+        for _, key, color, style in REFERENCE_LAYERS:
+            if getattr(self, key):
+                segments(sky.reference_lines.get(key, []), QColor(color), 1.4, style, clip_horizon=True)
         occupied = []
         def label(pos, text, color, size=9, force=False):
             p.setFont(QFont('Segoe UI', size))
@@ -154,13 +175,27 @@ class SkyNowDialog(QDialog):
         self.status = QLabel(''); self.status.setWordWrap(True); layout.addWidget(self.status)
         self.canvas = SkyCanvas(); layout.addWidget(self.canvas, 1)
         controls = QHBoxLayout()
+        self.layer_checks = {}
         for title, attr in [('Nomes', 'names'), ('Constelações', 'lines'), ('Via Láctea', 'milky')]:
             check = QCheckBox(title); check.setChecked(True)
+            self.layer_checks[attr] = check
             check.toggled.connect(lambda checked, key=attr: self.toggle_layer(key, checked))
             controls.addWidget(check)
         controls.addStretch()
         close = QPushButton('Fechar'); close.clicked.connect(self.close); controls.addWidget(close)
         layout.addLayout(controls)
+        reference_controls = QHBoxLayout()
+        reference_controls.addWidget(QLabel('Linhas:'))
+        for title, key, color, _ in REFERENCE_LAYERS:
+            check = QCheckBox(title)
+            check.setChecked(True)
+            check.setStyleSheet(f'color: {color};')
+            check.setToolTip('Mostrar ou ocultar '+title.lower())
+            check.toggled.connect(lambda checked, attr=key: self.toggle_layer(attr, checked))
+            self.layer_checks[key] = check
+            reference_controls.addWidget(check)
+        reference_controls.addStretch()
+        layout.addLayout(reference_controls)
         self.timer = QTimer(self); self.timer.setInterval(30000); self.timer.timeout.connect(self.refresh)
 
     def toggle_layer(self, key, checked):

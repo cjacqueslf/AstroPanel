@@ -15,6 +15,16 @@ Widget Windows para astronomia observacional: relógios UTC/local/LST, dados de 
 
 ## Instalação e execução
 
+### Download para Windows
+
+Baixe o pacote **AstroPanel-0.1.1-Windows-x64.zip** na
+[página de versões](https://github.com/cjacqueslf/AstroPanel/releases/latest).
+Extraia todo o ZIP e execute `AstroPanel.exe` dentro da pasta AstroPanel.
+Não é necessário instalar Python. Mantenha a pasta `_internal` junto do executável.
+Configure seu observatório em **Configurações → Localização**.
+
+### Executar pelo código-fonte
+
 Requer Python 3.11 ou posterior.
 
 ```powershell
@@ -40,11 +50,11 @@ pytest
 
 ## Empacotamento Windows
 
-Quando o MVP estiver validado, instale a dependência opcional de build e gere um executável:
+Instale a dependência opcional de build e gere o pacote portátil:
 
 ```powershell
 pip install -e ".[build]"
-pyinstaller --noconsole --name AstroPanel --paths src --icon src/astropanel/resources/astropanel-icon.ico -m astropanel.app
+powershell -ExecutionPolicy Bypass -File tools/build_windows.ps1
 ```
 
 Para distribuição, a etapa posterior recomenda Inno Setup ou WiX para criar o instalador. O recurso “Iniciar com Windows” grava a entrada no Registro do usuário atual depois de ser ativado em Settings.
@@ -128,3 +138,33 @@ A aba **Sobre** mostra a versão do AstroPanel, autoria, créditos das fontes e 
 ### Canal público de versões
 
 O repositório AstroPanel é público. A consulta de atualizações dispensa autenticação. **Abrir página das versões** mostra as notas e os arquivos disponíveis no GitHub.
+
+
+### Zoom nas imagens GOES e NASA
+
+Nas abas **GOES GeoColor**, **GOES IR** e **NASA**, use a roda do mouse ou os botões **+ / −** para ampliar de 1× a 8×. Com a imagem ampliada, arraste com o botão esquerdo para navegar. **Ajustar** ou um duplo clique restaura a imagem completa. O marcador e o rótulo do observatório acompanham a imagem. O zoom é preservado na atualização da mesma fonte e local; mudar o local restaura o enquadramento. A ampliação usa a imagem recebida, sem acrescentar resolução ou cobertura geográfica.
+
+
+### Objetos Deep Sky no painel de Altura da Lua
+
+Clique em **Deep Sky / personalizado…**. Digite um identificador **NGC**, **Messier/M**, **IC** ou **PGC** e use **Buscar catálogo** para obter coordenadas pelo CDS/Sesame (internet necessária). Confira os campos e clique em **Plotar objeto**. A curva verde do objeto é sobreposta à curva branca da Lua, para o observatório e a mesma janela de meio-dia a meio-dia. Os horários seguem o fuso do observatório.
+
+Para um objeto personalizado, preencha nome, ascensão reta (h:m:s ou horas decimais) e declinação (graus sexagesimais com sinal ou graus decimais). Os dois campos são editáveis, inclusive após uma consulta ao catálogo. As coordenadas são equatoriais ICRS/J2000. O cálculo de altitude é local, com amostras de 15 minutos, sem refração, nuvens ou obstáculos. A curva é recalculada ao mudar o local ou a noite. **Remover objeto** retorna à visualização apenas da Lua. O objeto selecionado permanece durante a sessão do aplicativo.
+
+
+### Sistema Solar no painel de altitude e horários de observação
+
+O botão **Sistema Solar (JPL)…**, ao lado de Deep Sky, consulta **NASA/JPL Horizons** pela designação digitada. Exemplos: `433` (Eros), `2024 YR4`, `C/2023 A3`, `Marte` ou `JPL 499` (ID Horizons). Números simples são números de asteroides; nomes de planetas são reconhecidos em português ou inglês. Cometas usam a solução de aparição selecionada por `CAP` no Horizons. Designações inexistentes e ambíguas são informadas separadamente de falhas de conexão.
+
+A consulta retorna coordenadas astrométricas topocêntricas ICRF/J2000 com o instante correspondente, e uma efeméride de altitude de um minuto para toda a janela de meio-dia a meio-dia. A curva usa a posição variável do objeto, não uma coordenada fixa para toda a noite. Ao mudar o observatório ou a noite, é necessária uma nova consulta online. As coordenadas exibidas no painel acompanham o minuto atual da efeméride em memória.
+
+Tanto objetos **Deep Sky/personalizados** quanto do **Sistema Solar** mostram **nascer**, **ocaso** e **melhor horário na noite astronômica**. O melhor horário maximiza a altitude do objeto acima do horizonte **somente entre o fim do crepúsculo astronômico e o início do próximo** (Sol abaixo de −18°). Se a maior altitude ocorrer fora dessa faixa, o resultado pode ser o começo ou o fim da noite astronômica. Ausência de noite astronômica, objeto abaixo do horizonte durante a noite e objeto circumpolar têm mensagens específicas. Nascer/ocaso referem-se aos eventos dentro da janela desenhada; as datas e o fuso do observatório são indicados para evitar confusão ao cruzar a meia-noite.
+
+Os horários são aproximados: nascer/ocaso são interpolados no cruzamento geométrico de altitude 0° em amostras de um minuto; o melhor horário é obtido na mesma amostragem, incluindo os limites da noite astronômica. Não consideram refração, obstáculos, nuvens ou iluminação lunar.
+
+Referência da API: https://ssd-api.jpl.nasa.gov/doc/horizons.html
+
+
+### Linhas de referência no Céu agora
+
+A faixa inferior **Linhas** permite mostrar ou ocultar independentemente **Meridiano** (laranja tracejado), **Eclíptica** (amarelo) e **Equador celeste** (ciano traço-ponto). As três linhas começam visíveis; os controles mantêm sua seleção enquanto a janela é usada. O meridiano passa pelo norte, zênite e sul. O equador e a eclíptica são calculados para a data e transformados para o horizonte do observatório, com atualização junto ao céu.

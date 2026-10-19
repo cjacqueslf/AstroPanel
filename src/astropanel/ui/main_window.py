@@ -14,6 +14,7 @@ from astropanel.services.astronomy import SunMoonInfo, calculate_sun_moon, local
 from astropanel.services.settings import SettingsService
 from astropanel.services.planets import calculate_planet_night
 from astropanel.services.startup import set_start_with_windows
+from astropanel.ui.object_altitude import ObjectAltitudePanel
 from astropanel.ui.sky import SkyNowDialog
 from astropanel.ui.icons import application_icon, application_icon_path
 from astropanel.ui.settings_dialog import SettingsDialog
@@ -76,8 +77,12 @@ class MainWindow(QMainWindow):
         layout.addLayout(header)
         clocks = Card("Relógios")
         self.clocks_card = clocks
+        clocks.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        clocks.layout().setContentsMargins(8, 3, 8, 3)
+        clocks.layout().setSpacing(0)
+        clocks.body.setSpacing(0)
         clock_strip = QFrame(); clock_strip.setObjectName("clockStrip")
-        clock_layout = QHBoxLayout(clock_strip); clock_layout.setContentsMargins(8, 8, 8, 8); clock_layout.setSpacing(0)
+        clock_layout = QHBoxLayout(clock_strip); clock_layout.setContentsMargins(4, 0, 4, 0); clock_layout.setSpacing(0)
         self.utc_clock = self._clock("UTC"); self.local_clock = self._clock("LOCAL"); self.lst_clock = self._clock("LST")
         clock_layout.addWidget(self.utc_clock[0], 1); clock_layout.addWidget(self._clock_divider())
         clock_layout.addWidget(self.local_clock[0], 1); clock_layout.addWidget(self._clock_divider())
@@ -97,6 +102,7 @@ class MainWindow(QMainWindow):
         sun_moon_layout.addWidget(self.moon_box, 1)
         self.sun_moon_panel = FittedPanel(self.sun_moon_content)
         self.moon_altitude_chart = MoonAltitudeChart()
+        self.altitude_panel = ObjectAltitudePanel(self.moon_altitude_chart)
         self.sun_box.setToolTip("Horários calculados para a localização e o fuso configurados.")
         self.moon_box.setToolTip("A iluminação representa a fração do disco lunar visível.")
         self.moonless_dialog = QDialog(self)
@@ -135,7 +141,7 @@ class MainWindow(QMainWindow):
         self.lunar_panel = LunarObservingPanel()
         self._planets_key = None
         self.panels = {"sun_moon": self.sun_moon_panel,
-                       "moon_altitude": FittedPanel(self.moon_altitude_chart), "weather": self.satellite_card,
+                       "moon_altitude": FittedPanel(self.altitude_panel), "weather": self.satellite_card,
                        "daynight": FittedPanel(self.daynight_card), "timeline": FittedPanel(self.timeline_panel),
                        "planets": FittedPanel(self.planet_panel), "seeing": FittedPanel(self.seeing_panel), "solar": FittedPanel(self.solar_panel),
                        "lunar": FittedPanel(self.lunar_panel)}
@@ -160,7 +166,7 @@ class MainWindow(QMainWindow):
     @staticmethod
     def _clock(title: str) -> tuple[QWidget, QLabel]:
         card = QWidget(); card.setObjectName("clockSegment")
-        layout = QVBoxLayout(card); layout.setContentsMargins(8, 7, 8, 8); layout.setSpacing(2)
+        layout = QVBoxLayout(card); layout.setContentsMargins(4, 0, 4, 0); layout.setSpacing(0)
         label = QLabel(title); label.setObjectName("clockLabel"); value = QLabel("--:--:--"); value.setObjectName("clockValue")
         value.setAlignment(Qt.AlignmentFlag.AlignCenter); label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(label); layout.addWidget(value); return card, value
@@ -290,6 +296,7 @@ class MainWindow(QMainWindow):
             self._sunmoon = calculate_sun_moon(self.settings.location, local_now.date())
             chart_day = local_now.date() if local_now.hour >= 12 else (local_now - timedelta(days=1)).date()
             self._moon_altitudes = moon_altitude_series(self.settings.location, chart_day)
+            self.altitude_panel.set_context(self.settings.location, chart_day)
             self._render_sunmoon(self._sunmoon)
         moonset_key = (self.settings.location, local_now.date())
         if self._moonset_key != moonset_key or (self._next_moonset and now_utc >= self._next_moonset.astimezone(timezone.utc)):
@@ -313,6 +320,7 @@ class MainWindow(QMainWindow):
             details = " · ".join(intervals) if intervals else "Nenhum intervalo com noite astronômica e Lua abaixo do horizonte."
             self.moonless_details.setText(f"Noite de {night_day:%d/%m/%Y} · Total: {total // 60}h {total % 60:02}min\n{details}")
         self.moonless_status.setText(moonless_status(self._moonless_windows, now_utc))
+        self.altitude_panel.set_now(now_utc)
         self.moon_altitude_chart.set_current_hour(local_now.hour + local_now.minute / 60 + local_now.second / 3600)
         self.timeline_panel.set_now(now_utc, self.settings.red_mode)
         if self._panel_is_active("planets"):
