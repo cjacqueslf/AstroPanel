@@ -2,6 +2,11 @@ param([string]$Python = "python")
 
 $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
+$originalPath = $env:PATH
+$Python = (& $Python -c "import sys; print(sys.executable)").Trim()
+if ($LASTEXITCODE -ne 0) { throw "Não foi possível localizar o Python." }
+# Avoid collecting DLLs from unrelated tools (for example another ICU build).
+$env:PATH = @((Split-Path -Parent $Python), "$env:SystemRoot\System32", $env:SystemRoot) -join ";"
 Push-Location $projectRoot
 try {
     & $Python -m PyInstaller --noconfirm --clean --windowed --onedir `
@@ -17,5 +22,6 @@ try {
     Compress-Archive -LiteralPath "dist/AstroPanel" -DestinationPath $archive
     Write-Output "Pacote criado: $archive"
 } finally {
+    $env:PATH = $originalPath
     Pop-Location
 }
