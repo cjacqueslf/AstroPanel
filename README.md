@@ -17,10 +17,11 @@ Widget Windows para astronomia observacional: relógios UTC/local/LST, dados de 
 
 ### Download para Windows
 
-Baixe o pacote **AstroPanel-0.1.2-Windows-x64.zip** na
+Baixe o instalador **AstroPanel-0.1.2-Setup-Windows-x64.exe** na
 [página de versões](https://github.com/cjacqueslf/AstroPanel/releases/latest).
-Extraia todo o ZIP e execute `AstroPanel.exe` dentro da pasta AstroPanel.
-Não é necessário instalar Python. Mantenha a pasta `_internal` junto do executável.
+Execute o instalador e siga as instruções. Ele copia todo o programa, cria automaticamente o ícone na área de trabalho e no menu Iniciar e inclui um desinstalador. Não é necessário instalar Python nem ter acesso de administrador.
+
+O arquivo ZIP também está disponível como alternativa portátil: extraia todo o conteúdo antes de executar `AstroPanel.exe` e mantenha a pasta `_internal` junto dele.
 Configure seu observatório em **Configurações → Localização**.
 
 ### Executar pelo código-fonte
@@ -57,7 +58,7 @@ pip install -e ".[build]"
 powershell -ExecutionPolicy Bypass -File tools/build_windows.ps1
 ```
 
-Para distribuição, a etapa posterior recomenda Inno Setup ou WiX para criar o instalador. O recurso “Iniciar com Windows” grava a entrada no Registro do usuário atual depois de ser ativado em Settings.
+Para gerar o instalador com ícones automáticos e desinstalador, instale [Inno Setup 6](https://jrsoftware.org/isdl.php) e execute `powershell -ExecutionPolicy Bypass -File tools/build_installer.ps1` com o mesmo Python usado no build. O pacote em `dist/AstroPanel` deve corresponder à versão atual do código. O recurso “Iniciar com Windows” grava a entrada no Registro do usuário atual depois de ser ativado em Settings.
 
 ## Mapas de satélite
 
